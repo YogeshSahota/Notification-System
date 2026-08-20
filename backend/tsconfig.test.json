@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "baseUrl": ".",
+    "types": ["jest", "node"],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@/*": ["src/*"],
+      "@modules/*": ["src/modules/*"],
+      "@channels/*": ["src/channels/*"],
+      "@common/*": ["src/common/*"],
+      "@kafka/*": ["src/kafka/*"],
+      "@scheduler/*": ["src/scheduler/*"],
+      "@redis/*": ["src/redis/*"],
+      "@config/*": ["src/config/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}

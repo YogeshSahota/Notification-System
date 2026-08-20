@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Recipient {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  phone     String?
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  notifications   Notification[]
+  userPreferences UserPreference[]
+
+  @@map("recipients")
+}
+
+enum Channel {
+  email
+  sms
+}
+
+enum NotificationStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+enum Priority {
+  HIGH
+  NORMAL
+}
+
+model Notification {
+  id             String               @id @default(uuid())
+  recipientId    String               @map("recipient_id")
+  recipient      Recipient            @relation(fields: [recipientId], references: [id])
+  channel        Channel
+  templateId     String               @map("template_id")
+  template       Template             @relation(fields: [templateId], references: [id])
+  variables      Json                 @default("{}")
+  status         NotificationStatus   @default(PENDING)
+  priority       Priority             @default(NORMAL)
+  sendAt         DateTime?            @map("send_at")
+  retryCount     Int                  @default(0) @map("retry_count")
+  failureReason  String?              @map("failure_reason")
+  idempotencyKey String?              @unique @map("idempotency_key")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  deadLetterQueue DeadLetterQueue?
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([sendAt], map: "idx_notification_send_at")
+  @@map("notifications")
+}
+
+model Template {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  channel   Channel
+  subject   String?
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  notifications Notification[]
+
+  @@map("templates")
+}
+
+model UserPreference {
+  userId    String   @map("user_id")
+  user      Recipient @relation(fields: [userId], references: [id])
+  channel   Channel
+  optedIn   Boolean  @default(true) @map("opted_in")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([userId, channel])
+  @@map("user_preferences")
+}
+
+model DeadLetterQueue {
+  id             String       @id @default(uuid())
+  notificationId String       @unique @map("notification_id")
+  notification   Notification @relation(fields: [notificationId], references: [id])
+  failureReason  String       @map("failure_reason")
+  failedAt       DateTime     @default(now()) @map("failed_at")
+
+  @@index([notificationId])
+  @@map("dead_letter_queue")
+}
